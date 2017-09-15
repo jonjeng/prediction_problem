@@ -1,0 +1,60 @@
+#!/usr/bin/python
+"""
+1. Program that fetches historical prices and dates of gold and silver from the given URLs and stores them locally.
+
+Note: this code uses Python 2.7 and beautifulsoup4
+"""
+
+import sys
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+from os import system
+
+def getPrices(url):
+	# This function obtains the data from the given wesites
+	payload = {'a':'Python'}
+	headers = {'User-agent': 'Mozilla/5.0'}
+	doc = requests.get(url%payload, headers=headers)
+	soup = BeautifulSoup(doc.text,'html5lib')
+
+	table = soup.find('div', {'id':'results_box'})
+	rows = table.findAll('td')
+	dates = []
+	prices = []
+	for row in rows:
+		entry = str(row.text)
+		if entry[0].isalpha():
+			dates.append(entry)
+		else:
+			prices.append(entry)
+	
+	dates = dates[0:-5]
+	prices = prices[0:len(prices):6]
+	df = pd.DataFrame(dates, columns=['Dates'])
+	df["Prices"] = prices
+	
+	return df
+
+
+if __name__ == "__main__":
+	
+	# Check the validity of the arguments
+	if len(sys.argv) is not 2:
+		sys.exit('Error: please enter exactly one argument!')
+	
+	metal = str(sys.argv[1]).lower()
+	
+	if 'gold' in metal:
+		goldurl = 'https://www.investing.com/commodities/gold-historical-data'
+		df=getPrices(goldurl)
+	elif  'silver' in metal:
+		silverurl = 'https://www.investing.com/commodities/silver-historical-data'
+		df=getPrices(silverurl)
+	else: 
+		sys.exit('Error: please enter "gold" or "silver"!')
+	
+	# Print the data and store it in a csv file
+	print('Results: \n\n')
+	print(df)
+	df.to_csv("Prices_Data", index=False)
